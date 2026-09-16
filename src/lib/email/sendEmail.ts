@@ -18,18 +18,58 @@ export async function sendEmail(payload: SendEmailRequestBody): Promise<SendEmai
   const recipientEmail = config.user; // info@velnorasoftware.com
   const fromHeader = `"Velnora Software" <${senderEmail}>`;
 
-  // Plain text fallback as specified
-  const textBody = `Name: ${payload.name}
-Email: ${payload.email}
-
-Message:
-${payload.message}`;
+  // Plain text fallback
+  const textBody = [
+    `Name: ${payload.name}`,
+    `Email: ${payload.email}`,
+    payload.phone ? `Phone: ${payload.phone}` : null,
+    payload.source ? `Inquiry Source: ${payload.source}` : null,
+    payload.project ? `Project / Category: ${payload.project}` : null,
+    `Subject: ${payload.subject}`,
+    "",
+    "Message:",
+    payload.message,
+  ]
+    .filter(Boolean)
+    .join("\n");
 
   // Clean, modern, responsive HTML email template
   const escapedName = escapeHtml(payload.name);
   const escapedEmail = escapeHtml(payload.email);
   const escapedSubject = escapeHtml(payload.subject);
   const escapedMessage = escapeHtml(payload.message).replace(/\n/g, "<br />");
+  const escapedPhone = payload.phone ? escapeHtml(payload.phone) : null;
+  const escapedProject = payload.project ? escapeHtml(payload.project) : null;
+  const escapedSource = payload.source ? escapeHtml(payload.source) : null;
+
+  const phoneRow = escapedPhone
+    ? `<tr>
+        <td style="padding-bottom: 20px;">
+          <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.8px; margin-bottom: 4px;">Phone Number</div>
+          <div style="font-size: 15px; font-weight: 600; color: #0f172a;">
+            <a href="tel:${escapedPhone}" style="color: #0f172a; text-decoration: none;">${escapedPhone}</a>
+          </div>
+        </td>
+      </tr>`
+    : "";
+
+  const sourceRow = escapedSource
+    ? `<tr>
+        <td style="padding-bottom: 20px;">
+          <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.8px; margin-bottom: 4px;">Inquiry Type</div>
+          <div style="font-size: 15px; font-weight: 600; color: #0f172a;">${escapedSource}</div>
+        </td>
+      </tr>`
+    : "";
+
+  const projectRow = escapedProject
+    ? `<tr>
+        <td style="padding-bottom: 20px;">
+          <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.8px; margin-bottom: 4px;">Project / Service</div>
+          <div style="font-size: 15px; font-weight: 600; color: #0f172a;">${escapedProject}</div>
+        </td>
+      </tr>`
+    : "";
 
   const htmlBody = `<!DOCTYPE html>
 <html lang="en">
@@ -47,7 +87,7 @@ ${payload.message}`;
           <tr>
             <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 28px 32px; color: #ffffff;">
               <h1 style="margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">Velnora Software</h1>
-              <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">New Contact Form Submission</p>
+              <p style="margin: 6px 0 0 0; font-size: 13px; color: #94a3b8;">${escapedSource ? escapedSource + " Submission" : "New Website Inquiry"}</p>
             </td>
           </tr>
 
@@ -69,6 +109,9 @@ ${payload.message}`;
                     </div>
                   </td>
                 </tr>
+                ${phoneRow}
+                ${sourceRow}
+                ${projectRow}
                 <tr>
                   <td style="padding-bottom: 20px;">
                     <div style="font-size: 11px; text-transform: uppercase; font-weight: 700; color: #64748b; letter-spacing: 0.8px; margin-bottom: 4px;">Subject</div>
@@ -90,7 +133,7 @@ ${payload.message}`;
           <!-- Footer -->
           <tr>
             <td style="background-color: #f8fafc; padding: 20px 32px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; text-align: center;">
-              This notification was generated from the Velnora Software website contact form.
+              This notification was generated from the Velnora Software website contact system.
               <br />
               Direct reply will go to <a href="mailto:${escapedEmail}" style="color: #2563eb;">${escapedEmail}</a>.
             </td>

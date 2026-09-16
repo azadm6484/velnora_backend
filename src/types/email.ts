@@ -6,6 +6,10 @@ export interface SendEmailRequestBody {
   email: string;
   subject: string;
   message: string;
+  phone?: string;
+  project?: string;
+  source?: string;
+  details?: string;
 }
 
 /**

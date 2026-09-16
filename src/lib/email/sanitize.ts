@@ -34,9 +34,9 @@ export function validateAndSanitizeSendEmailInput(body: unknown): ValidationResu
     };
   }
 
-  const { name, email, subject, message } = body as Record<string, unknown>;
+  const { name, email, subject, message, phone, project, source, details } = body as Record<string, unknown>;
 
-  // Check required fields existence and types
+  // Check required name and email fields
   if (typeof name !== "string" || name.trim() === "") {
     return {
       isValid: false,
@@ -51,21 +51,32 @@ export function validateAndSanitizeSendEmailInput(body: unknown): ValidationResu
     };
   }
 
-  if (typeof subject !== "string" || subject.trim() === "") {
+  // Resolve message or details
+  const resolvedMessage =
+    typeof message === "string" && message.trim() !== ""
+      ? message
+      : typeof details === "string" && details.trim() !== ""
+      ? details
+      : "";
+
+  if (!resolvedMessage.trim()) {
     return {
       isValid: false,
-      error: "The 'subject' field is required and must be a non-empty string",
+      error: "The 'message' (or 'details') field is required and must be a non-empty string",
     };
   }
 
-  if (typeof message !== "string" || message.trim() === "") {
-    return {
-      isValid: false,
-      error: "The 'message' field is required and must be a non-empty string",
-    };
+  // Resolve subject with fallback if not provided
+  let resolvedSubject = "";
+  if (typeof subject === "string" && subject.trim() !== "") {
+    resolvedSubject = subject.trim();
+  } else {
+    const src = typeof source === "string" && source.trim() ? source.trim() : "Website Inquiry";
+    const prj = typeof project === "string" && project.trim() ? ` (${project.trim()})` : "";
+    resolvedSubject = `${src}${prj}`;
   }
 
-  // Length validations
+  // Length and format validations
   const trimmedName = stripHeaderInjection(name);
   if (trimmedName.length > 100) {
     return {
@@ -89,7 +100,7 @@ export function validateAndSanitizeSendEmailInput(body: unknown): ValidationResu
     };
   }
 
-  const cleanSubject = stripHeaderInjection(subject);
+  const cleanSubject = stripHeaderInjection(resolvedSubject);
   if (cleanSubject.length > 200) {
     return {
       isValid: false,
@@ -97,12 +108,30 @@ export function validateAndSanitizeSendEmailInput(body: unknown): ValidationResu
     };
   }
 
-  const cleanMessage = message.trim();
+  const cleanMessage = resolvedMessage.trim();
   if (cleanMessage.length > 10000) {
     return {
       isValid: false,
       error: "The 'message' field exceeds the maximum allowed length of 10,000 characters",
     };
+  }
+
+  // Optional phone
+  let cleanPhone: string | undefined = undefined;
+  if (typeof phone === "string" && phone.trim()) {
+    cleanPhone = stripHeaderInjection(phone).slice(0, 40);
+  }
+
+  // Optional project/service
+  let cleanProject: string | undefined = undefined;
+  if (typeof project === "string" && project.trim()) {
+    cleanProject = stripHeaderInjection(project).slice(0, 100);
+  }
+
+  // Optional source
+  let cleanSource: string | undefined = undefined;
+  if (typeof source === "string" && source.trim()) {
+    cleanSource = stripHeaderInjection(source).slice(0, 100);
   }
 
   return {
@@ -112,6 +141,9 @@ export function validateAndSanitizeSendEmailInput(body: unknown): ValidationResu
       email: cleanEmail,
       subject: cleanSubject,
       message: cleanMessage,
+      phone: cleanPhone,
+      project: cleanProject,
+      source: cleanSource,
     },
   };
 }
